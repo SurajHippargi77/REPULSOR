@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>REPULSOR Dashboard</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+      .container { padding: 24px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+      .card { background: #111827; border: 1px solid #334155; border-radius: 12px; padding: 18px; }
+      .status { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #1d4ed8; font-size: 12px; }
+      textarea, input, button { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #020817; color: #e2e8f0; }
+      button { background: #2563eb; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>REPULSOR</h1>
+      <div class="status">Engineer-ready orchestration</div>
+      <div class="grid" style="margin-top: 20px;">
+        <div class="card">
+          <h3>New Project</h3>
+          <input id="name" placeholder="Project name" />
+          <textarea id="description" rows="5" placeholder="Describe the software project idea or repo URL"></textarea>
+          <button id="createProjectBtn">Create project</button>
+        </div>
+        <div class="card">
+          <h3>Repository Intelligence</h3>
+          <input id="repoUrl" placeholder="https://github.com/user/project" />
+          <button id="repoAnalyzeBtn">Analyze repository</button>
+        </div>
+        <div class="card">
+          <h3>Approval Center</h3>
+          <input id="projectId" placeholder="Project ID" />
+          <textarea id="approvalFeedback" rows="4" placeholder="Approval feedback"></textarea>
+          <button id="approveBtn">Approve</button>
+          <button id="rejectBtn">Reject</button>
+          <button id="reviseBtn">Request changes</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top: 18px;">
+        <h3>Agent activity</h3>
+        <pre id="activityOutput">No activity yet.</pre>
+      </div>
+    </div>
+    <script>
+      async function api(path, options={}) {
+        const response = await fetch(path, {
+          headers: { 'Content-Type': 'application/json' },
+          ...options,
+        });
+        return response.json();
+      }
+      function show(result) {
+        if (result.project) {
+          document.getElementById('projectId').value = result.project.project_id || '';
+        }
+        document.getElementById('activityOutput').textContent = JSON.stringify(result, null, 2);
+      }
+      document.getElementById('createProjectBtn').addEventListener('click', async () => {
+        const payload = { name: document.getElementById('name').value, description: document.getElementById('description').value };
+        const result = await api('/api/projects', { method: 'POST', body: JSON.stringify(payload) });
+        show(result);
+      });
+      document.getElementById('repoAnalyzeBtn').addEventListener('click', async () => {
+        const result = await api('/api/repository/analyze', { method: 'POST', body: JSON.stringify({ repository_url: document.getElementById('repoUrl').value }) });
+        show(result);
+      });
+      document.getElementById('approveBtn').addEventListener('click', async () => {
+        const projectId = document.getElementById('projectId').value;
+        const result = await api(`/api/projects/${projectId}/approve`, { method: 'POST', body: JSON.stringify({ decision: 'approve', feedback: document.getElementById('approvalFeedback').value }) });
+        show(result);
+      });
+      document.getElementById('rejectBtn').addEventListener('click', async () => {
+        const projectId = document.getElementById('projectId').value;
+        const result = await api(`/api/projects/${projectId}/approve`, { method: 'POST', body: JSON.stringify({ decision: 'reject', feedback: document.getElementById('approvalFeedback').value }) });
+        show(result);
+      });
+      document.getElementById('reviseBtn').addEventListener('click', async () => {
+        const projectId = document.getElementById('projectId').value;
+        const result = await api(`/api/projects/${projectId}/revise`, { method: 'POST', body: JSON.stringify({ decision: 'revise', feedback: document.getElementById('approvalFeedback').value }) });
+        show(result);
+      });
+    </script>
+  </body>
+</html>

@@ -1,87 +1,181 @@
-# Multi-Agent-System-using-LangGraph-MCP-Supervisor-Guardrails-HITL
+# REPULSOR
 
-A demo multi-agent system that uses LangGraph and MCP to implement a travel-planning assistant with a Supervisor, input Guardrails, and Human-In-The-Loop (HITL) approval flows. The project includes a FastAPI frontend, example MCP server, and client helpers to demonstrate how agents, supervisors, and guardrails can be composed into a safe, reviewable planning pipeline.
+Reasoning & Engineering Platform for Unified Software Operations and Research
 
-Key ideas:
-- Multi-agent coordination using LangGraph and MCP
-- Supervisor agent to manage complex workflows
-- Input guardrails to validate user requests
-- Human-in-the-loop approval for generated plans
+## Problem
+Software teams often need a coordinated way to turn an idea, repository, or vague requirement into an actionable engineering blueprint. They need architecture guidance, repository intelligence, research synthesis, implementation planning, testing validation, security review, and human oversight without losing control of the workflow.
 
-Contents
-- `app.py`: FastAPI web frontend and API endpoints
-- `backend.py`: core agent orchestration / travel-planner logic
-- `mcp_client.py`: client helpers to interact with the MCP server
-- `custom_weather_mcp_server.py`: example MCP server for weather checks
-- `templates/`, `static/`: frontend UI assets (HTML, JS, CSS)
+## Solution
+REPULSOR is a multi-agent engineering platform built with FastAPI, LangGraph, MCP, and structured project state. A project request runs through a compiled graph of specialist agents and stops at a real human approval gate before it can be finalized.
 
-Features
-- Interactive web UI for sending travel planning prompts
-- Endpoint for drafting travel plans and separate approval endpoint
-- Example MCP server demonstrating domain adapters (weather, checkpoints)
+## Architecture
+REPULSOR is organized around a shared project workflow and specialized agents:
 
-Prerequisites
-- Python 3.10+ (recommended)
-- Git (to clone the repo)
-- A virtual environment tool (venv) or similar
+- Core orchestrator: manages the lifecycle and state transitions.
+- Architect agent: proposes structure, components, and system boundaries.
+- Research agent: gathers domain and repository insights.
+- Code intelligence agent: inspects code and repository signals.
+- Implementation agent: converts architecture into engineering tasks.
+- Test engine agent: defines validation and regression checks.
+- Security agent: reviews risk and guardrails.
+- Documentation agent: writes maintainable operational documentation.
 
-Quick start (Windows)
+## Agents
+Each agent receives the prior state and returns structured JSON. When `GROQ_API_KEY` is configured, the agent calls `ChatGroq`; otherwise it uses an explicit, input-derived development fallback and records that mode in `_execution`. No fallback is presented as an LLM response.
 
-1. Create and activate a virtual environment
+## LangGraph
+The workflow is a compiled `StateGraph` in `graph/workflow.py`. Its execution path is:
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1    # PowerShell
+```text
+User -> Core -> Architect -> Research -> Code Intelligence -> Implementation
+  -> Testing -> Security -> Documentation -> Review -> Approval -> Finalize
 ```
 
-2. Install dependencies
+The initial graph stops at `waiting_for_approval`. Approval resumes a second graph: approve finalizes, reject stops, and revise re-runs the main graph with feedback.
 
-```powershell
+It supports:
+
+- requirement analysis
+- architecture review
+- research and repository intelligence
+- implementation planning
+- testing
+- security
+- documentation
+- quality review
+- approval
+
+## MCP
+REPULSOR includes MCP server components for developer workflows:
+
+- Research MCP: research and ecosystem-oriented tool calls.
+- Repository MCP: safe repository inspection and directory listing.
+- Development MCP: stack validation and implementation guidance.
+
+The workflow calls the reusable implementations behind these registered tools. Servers can be started directly with `python mcp/research_server.py`, `python mcp/repository_server.py`, or `python mcp/development_server.py`. All MCP access is constrained to safe operations and avoids destructive commands.
+
+## Repository Intelligence
+The application supports both:
+
+- public GitHub URL analysis
+- local repository inspection
+
+It calls the GitHub REST API for repository metadata, languages, and top-level contents. The result includes owner, repository name, description, language, default branch, technologies, important files, structure, observations, and recommendations. API errors and rate limits are reported without fabricated repository data.
+
+## Human-in-the-Loop
+The human approval step is a first-class part of the workflow. The engineer can:
+
+- approve the proposal
+- reject it
+- request changes with feedback
+
+The result changes the workflow state and prevents the system from silently continuing after a rejected or revised plan.
+
+## Guardrails
+REPULSOR includes practical safeguards:
+
+- redact secret-bearing text before persistence, workflow execution, or output
+- restrict destructive operations and path traversal
+- avoid exposing secrets in generated summaries
+- validate user input and repository paths before processing
+
+## API
+The server exposes developer-oriented endpoints:
+
+- GET /api/health
+- POST /api/projects
+- GET /api/projects/{project_id}
+- POST /api/projects/{project_id}/analyze
+- POST /api/projects/{project_id}/research
+- POST /api/projects/{project_id}/architecture
+- POST /api/projects/{project_id}/generate-plan
+- POST /api/projects/{project_id}/approve
+- POST /api/projects/{project_id}/revise
+- POST /api/repository/analyze
+- GET /api/projects/{project_id}/status
+
+## Frontend
+The frontend is a lightweight dashboard that surfaces:
+
+- dashboard overview
+- project creation
+- repository intelligence
+- agent activity
+- approval center
+- final blueprint summary
+
+## Setup
+
+1. Create and activate a Python virtual environment.
+2. Install dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
-3. Run the FastAPI app (development)
+3. Start the FastAPI app:
 
-```powershell
-# option A (run module)
-python app.py
-
-# option B (uvicorn)
-uvicorn app:app --reload --host 127.0.0.1 --port 8000
+```bash
+python main.py
 ```
 
-4. Open the web UI
+4. Access the dashboard at:
 
-Visit http://127.0.0.1:8000 in your browser to use the TripMate frontend.
-
-Running the MCP server (example)
-- The repository includes `custom_weather_mcp_server.py` as an example MCP server. Run it in a separate terminal if you want to experiment with custom adapters used by the demo.
-
-```powershell
-# start example MCP server (if needed)
-python custom_weather_mcp_server.py
+```text
+http://127.0.0.1:8000/
 ```
 
-API Endpoints
-- `POST /api/travel` — create or resume a travel planning thread. JSON: `{ "message": "<user prompt>", "thread_id": "optional-thread-id" }`
-- `POST /api/travel/approve` — approve or request revisions for a draft. JSON: `{ "thread_id": "<id>", "approved": true|false, "feedback": "optional" }`
-- `GET /health` — basic health check and features list
+## Environment variables
+Copy `.env.example` to a local `.env` or export the variables directly. `GROQ_API_KEY` enables the real LLM path; without it, the development fallback remains executable and is labeled in every agent result. Do not hard-code secrets.
 
-Configuration & environment
-- Secrets and API keys are not included in the repo. Use environment variables or a `.env` file for any required keys consumed by `langgraph`, `langchain`, or other adapters.
+## Usage
+Example:
 
-Development notes
-- The project keeps synchronous convenience wrappers in `backend.py` while running an async FastAPI server — `nest_asyncio` is applied in `app.py` to allow the sync helpers to call async MCP helpers.
-- Tests are not included; to experiment, interact with the web UI or call the API endpoints directly.
+```json
+{
+  "name": "Network Intrusion Detection API",
+  "description": "I want to build a network intrusion detection API using Python, FastAPI and machine learning."
+}
+```
 
-Contributing
-- Contributions are welcome. Please open issues or pull requests for bug fixes, documentation improvements, or new adapter examples.
+You can also provide a public repository URL for analysis:
 
-License
-- This repository follows the license in the `LICENSE` file.
+```json
+{
+  "repository_url": "https://github.com/microsoft/vscode"
+}
+```
 
-Acknowledgements
-- Built as a demonstration of LangGraph + MCP patterns with supervisor and guardrail concepts.
+## Testing
+Run the automated test suite:
 
-Contact
-- For questions or suggestions, open an issue or contact the repository owner.
+```bash
+pytest -q
+```
+
+## Project structure
+
+```text
+REPULSOR/
+├── main.py
+├── config.py
+├── models.py
+├── requirements.txt
+├── README.md
+├── agents/
+├── graph/
+├── mcp/
+├── tools/
+├── api/
+├── services/
+├── frontend/
+├── tests/
+└── ...
+```
+
+## Current limitations
+- Project storage is in-memory and is lost when the process stops.
+- LLM execution requires a valid `GROQ_API_KEY`; fallback mode is deterministic and not a substitute for model evaluation.
+- GitHub analysis uses unauthenticated REST requests and is subject to rate limits.
+- Repository inspection is metadata and top-level contents analysis, not full static analysis.
+- The dashboard is a lightweight development UI, not an authenticated production console.
