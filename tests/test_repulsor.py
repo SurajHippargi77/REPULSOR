@@ -47,7 +47,7 @@ def test_approval_workflow_rejects_secret_input():
         "/api/projects",
         json={
             "name": "Secret Handling API",
-            "description": "Build an API with a secret key like sk_live_1234567890 and expose it in logs.",
+            "description": "Build an API with api_key=TEST_SECRET_VALUE_1234567890 and expose it in logs.",
         },
     )
     assert response.status_code == 200
@@ -123,10 +123,10 @@ def test_revision_reruns_workflow_with_feedback():
 
 
 def test_safety_and_mcp_tools():
-    secret = "sk_live_1234567890"
+    secret = "TEST_SECRET_VALUE_1234567890"
     response = client.post(
         "/api/projects",
-        json={"name": "Secret Service", "description": f"Never expose {secret} in output."},
+        json={"name": "Secret Service", "description": f"api_key={secret}; never expose it in output."},
     )
     assert response.status_code == 200
     assert secret not in response.text

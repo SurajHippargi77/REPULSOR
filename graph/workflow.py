@@ -14,7 +14,7 @@ from agents.security import SecurityAgent
 from agents.testing import TestEngineAgent
 from graph.state import ProjectState
 from services.repository_service import fetch_public_repo_summary
-from tools.mcp_tools import fetch_research_summary, validate_stack
+from services.mcp_transport import call_mcp_tool
 
 core_agent = RepulsorCore()
 architect_agent = ArchitectAgent()
@@ -42,7 +42,14 @@ def research_node(state: ProjectState) -> dict[str, Any]:
         state["user_input"],
         state.get("repo_analysis", {}),
     )
-    result["mcp_research"] = fetch_research_summary(state["user_input"])
+    try:
+        result["mcp_research"] = call_mcp_tool(
+            "research",
+            "fetch_research_summary",
+            {"topic": state["user_input"]},
+        )
+    except Exception as exc:
+        result["mcp_research_error"] = f"Research MCP unavailable: {type(exc).__name__}"
     return {"research_summary": result, "workflow_log": ["research: findings gathered with Research MCP"]}
 
 
@@ -56,7 +63,14 @@ def implementation_node(state: ProjectState) -> dict[str, Any]:
         state["architecture_summary"],
         state["requirement_summary"],
     )
-    result["stack_validation"] = validate_stack(state["user_input"])
+    try:
+        result["stack_validation"] = call_mcp_tool(
+            "development",
+            "validate_stack",
+            {"requirements": state["user_input"]},
+        )
+    except Exception as exc:
+        result["stack_validation_error"] = f"Development MCP unavailable: {type(exc).__name__}"
     return {"implementation_summary": result, "workflow_log": ["implementation: development plan produced"]}
 
 
